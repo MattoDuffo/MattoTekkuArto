@@ -991,8 +991,7 @@ uv           TexCoord             UV</pre>
             const vr = rng.pick(variants.filter((x) => (x.lvl || 1) <= level));
             const fill = (vals) => vr.template.replace(/\[\[(\d+)\]\]/g, (_, i) => vals[+i]);
             return {
-              prompt: 'This HLSL must run in WebGL. Fill in the GLSL:',
-              code: '// HLSL\n' + vr.hlsl,
+              prompt: `This <b>HLSL</b> must run in WebGL:<pre class="code wrap" style="font-size:12.5px">${vr.hlsl}</pre>Fill in the <b>GLSL</b> version:`,
               template: vr.template, slots: vr.slots,
               build: (vals) => ({ frag: fill(vals), textures: vr.tex ? { uTex: 'photo' } : undefined }),
               explain: '<p>The HLSL names (lerp, frac, float3, tex2D, atan2) don\'t exist in GLSL — the preview shows "no matching overloaded function" or "undeclared identifier". GLSL: mix, fract, vec3, texture2D, atan(y, x).</p>',
