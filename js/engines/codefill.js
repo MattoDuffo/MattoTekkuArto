@@ -10,7 +10,7 @@
 // }
 // Scoring: exact answers = 100%. Any other combination that renders the same
 // image as the target also counts as correct (there is often more than one way!).
-import { h, shaderView, highlight } from '../core/ui.js';
+import { h, shaderView, highlight, codeBlock } from '../core/ui.js';
 import { renderer } from '../core/renderer.js';
 
 const EMPTY = { frag: 'col = vec3(0.1 + 0.04 * checker(uv, 8.0));' };
@@ -21,6 +21,7 @@ export default {
   round({ el, item, rng }) {
     return new Promise((resolve) => {
       if (item.prompt) el.append(h('div.prompt', { html: item.prompt + (item.sub ? `<span class="sub">${item.sub}</span>` : '') }));
+      if (item.code) el.append(codeBlock(item.code, 'wrap'));
       const answers = item.slots.map((s) => s.answer);
       const vals = item.slots.map(() => null);
       const target = item.target || (item.build ? item.build(answers) : null);

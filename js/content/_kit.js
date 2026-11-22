@@ -3,7 +3,7 @@
 import * as G from '../core/glsl.js';
 export { G };
 export const { f, v, n, nv, css } = G;
-export { h, codeBlock, shaderView } from '../core/ui.js';
+export { h, codeBlock, shaderView, swatch } from '../core/ui.js';
 export { graph, canvas2d, plot, vectorPlane, arrow } from '../core/draw2d.js';
 
 /** True/False question for the mcq engine */
