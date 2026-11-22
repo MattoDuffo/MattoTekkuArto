@@ -61,7 +61,7 @@ async function answerRound() {
     return;
   }
   if (await page.locator('.vec-canvas').count()) {
-    const box = await page.locator('.vec-canvas').boundingBox();
+    const box = await page.locator('.vec-canvas').last().boundingBox();
     await page.mouse.click(box.x + box.width * 0.7, box.y + box.height * 0.3);
     await stage.getByText('Check', { exact: true }).click();
     return;
@@ -72,6 +72,13 @@ async function answerRound() {
     return;
   }
   const canvas = page.locator('.sview canvas, canvas');
+  const customBtn = stage.locator('button.btn.block:not([disabled])').filter({ hasText: /▶|Check|Submit|Go/ });
+  if (await customBtn.count()) {
+    const box = await canvas.first().boundingBox().catch(() => null);
+    if (box) await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+    await customBtn.first().click();
+    return;
+  }
   if (await stage.getByText('Confirm').count()) {
     const box = await canvas.first().boundingBox();
     await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
