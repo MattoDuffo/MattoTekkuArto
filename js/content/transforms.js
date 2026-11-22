@@ -176,7 +176,7 @@ col = texture2D(uTex, p).rgb;</pre>
             { spec: fSpec('vec2 p = uv;\ncol = drawF(p);'), label: '<code>p = uv</code>' },
             { spec: fSpec('vec2 p = uv - vec2(0.25, 0.0);\ncol = drawF(p);'), label: '<code>p = uv - 0.25</code> → F moved right' },
           ],
-          quiz: { q: 'With <code>p = uv - vec2(0.25, 0.0)</code>, the pixel at uv.x = 0.75 shows the paper at…', options: ['x = 0.5', 'x = 1.0', 'x = 0.75'], answer: 0, explain: '0.75 − 0.25 = 0.5. That pixel shows what used to be at 0.5 — the paper slid right.' },
+          quiz: { q: 'With <code>p = uv - vec2(0.25, 0.0)</code>, the pixel at uv.x = 0.75 shows the paper at…', options: ['x = 1.0', 'x = 0.5', 'x = 0.75'], answer: 1, explain: '0.75 − 0.25 = 0.5. That pixel shows what used to be at 0.5 — the paper slid right.' },
         },
         {
           title: 'Both directions at once',
@@ -322,7 +322,7 @@ col = texture2D(uTex, p).rgb;</pre>
             { spec: fSpec('vec2 p = uv * 2.0;\ncol = drawF(p);'), label: '<code>uv * 2.0</code> → smaller' },
             { spec: fSpec('vec2 p = uv * 0.5;\ncol = drawF(p);'), label: '<code>uv * 0.5</code> → bigger' },
           ],
-          quiz: { q: 'You want the F to look <b>3× bigger</b>. Multiply uv by…', options: ['1.0 / 3.0 (≈ 0.333)', '3.0', '-3.0'], answer: 0, explain: 'Bigger on screen = each pixel covers less paper = multiply by less than 1. Size on screen = 1 / s.' },
+          quiz: { q: 'You want the F to look <b>3× bigger</b>. Multiply uv by…', options: ['3.0', '-3.0', '1.0 / 3.0 (≈ 0.333)'], answer: 2, explain: 'Bigger on screen = each pixel covers less paper = multiply by less than 1. Size on screen = 1 / s.' },
         },
         {
           title: 'It shrinks towards the corner',
@@ -356,7 +356,7 @@ col = texture2D(uTex, p).rgb;</pre>
           shader: (v) => fSpec('vec2 p = fract(uv * uS);\ncol = drawF(p);', { uS: v.s }),
           code: (v) => `vec2 p = fract(uv * ${f(v.s)});\ncol = drawF(p);`,
           after: '<div class="tip">💡 This is exactly what the <b>Tiling</b> input of Shader Graph\'s Tiling And Offset (or a TexCoord node\'s UTiling / VTiling in Unreal) does: multiply the UVs.</div>',
-          quiz: { q: '<code>fract(uv * vec2(4.0, 2.0))</code> gives how many copies in total?', options: ['8', '6', '2'], answer: 0, explain: '4 across × 2 up = 8 tiles. Each copy is 4× thinner and 2× shorter.' },
+          quiz: { q: '<code>fract(uv * vec2(4.0, 2.0))</code> gives how many copies in total?', options: ['6', '8', '2'], answer: 1, explain: '4 across × 2 up = 8 tiles. Each copy is 4× thinner and 2× shorter.' },
         },
       ],
       games: [
@@ -499,7 +499,7 @@ col = texture2D(uTex, p).rgb;</pre>
             { spec: (v) => fSpec('vec2 p = rot(uA) * (uv - 0.5) + 0.5;\ncol = drawF(p);', { uA: v.a * DEG }), label: '<code>rot(a)</code> → clockwise' },
             { spec: (v) => fSpec('vec2 p = rot(-uA) * (uv - 0.5) + 0.5;\ncol = drawF(p);', { uA: v.a * DEG }), label: '<code>rot(-a)</code> → anticlockwise' },
           ],
-          quiz: { q: 'You want the F to lean <b>anticlockwise</b> by 30°. Which line?', options: ['p = rot(radians(-30.0)) * p;', 'p = rot(radians(30.0)) * p;', 'p = rot(30.0) * p;'], answer: 0, explain: 'The picture turns opposite to the coordinates, so use −30°. (And rot(30.0) would mean 30 radians!)' },
+          quiz: { q: 'You want the F to lean <b>anticlockwise</b> by 30°. Which line?', options: ['p = rot(radians(30.0)) * p;', 'p = rot(30.0) * p;', 'p = rot(radians(-30.0)) * p;'], answer: 2, explain: 'The picture turns opposite to the coordinates, so use −30°. (And rot(30.0) would mean 30 radians!)' },
         },
         {
           title: 'Spin around the centre',
@@ -816,7 +816,7 @@ col = texture2D(uTex, p).rgb;</pre>
             P.arrow(r, '#ffd479', 'M*v', [0, 0], 3.5);
             el.append(P.el, h('div.readout', { html: `M = mat2(1.0, 0.5, -0.5, 1.0)\nM*v = ${n(v.x)}×(1, 0.5) + ${n(v.y)}×(−0.5, 1)\n    = ${nv(r, 3)}` }));
           },
-          quiz: { q: '<code>mat2(2.0, 0.0, 0.0, 3.0) * vec2(1.0, 1.0)</code> = ?', options: ['(2, 3)', '(5, 0)', '(2, 0)'], answer: 0, explain: '1 × (2, 0) + 1 × (0, 3) = (2, 3).' },
+          quiz: { q: '<code>mat2(2.0, 0.0, 0.0, 3.0) * vec2(1.0, 1.0)</code> = ?', options: ['(5, 0)', '(2, 3)', '(2, 0)'], answer: 1, explain: '1 × (2, 0) + 1 × (0, 3) = (2, 3).' },
         },
         {
           title: 'Matrices you already know',

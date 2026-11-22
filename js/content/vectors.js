@@ -491,15 +491,15 @@ export default {
           blurb: 'Glance at two arrows, say the sign of their dot product.',
           gen: (rng, level) => {
             const base = rng.step(0, 345, 15);
-            const gap = rng.pick(level === 1 ? [0, 30, 90, 150, 180] : level === 2 ? [20, 60, 90, 120, 160] : [70, 80, 90, 100, 110, 45, 135]);
-            const la = rng.pick([0.8, 1.2, 1.6]), lb = rng.pick([0.6, 1, 1.5]);
+            const gap = rng.pick(level === 1 ? [30, 60, 90, 120, 150] : level === 2 ? [20, 60, 90, 120, 160] : [70, 80, 90, 100, 110, 45, 135]);
+            const la = rng.pick([1.2, 1.6]), lb = rng.pick([0.9, 1.3, 1.6]);
             const a = G.mul(unitAt(base), la), b = G.mul(unitAt(base + gap * rng.sign()), lb);
             const d = G.dot(a, b);
             const ans = Math.abs(d) < 1e-6 ? 1 : d > 0 ? 0 : 2;
             return {
               prompt: 'What is the sign of <code>dot(a, b)</code>?',
               sub: 'The lengths don\'t matter for the sign — only the angle.',
-              visual: plane(2, (P) => { P.arrow(a, '#6bdfff', 'a'); P.arrow(b, '#ffd479', 'b'); }, 220),
+              visual: plane(1.8, (P) => { P.arrow(a, '#6bdfff', 'a'); P.arrow(b, '#ffd479', 'b'); }, 240),
               options: ['➕ positive (angle < 90°)', '0️⃣ zero (exactly 90°)', '➖ negative (angle > 90°)'],
               answer: ans, noShuffle: true, grid: false,
               explain: `<p>The angle between them is <b>${gap}°</b> → ${ans === 0 ? 'less than 90° → positive' : ans === 1 ? 'exactly 90° → zero' : 'more than 90° → negative'}. (Exact value: ${n(d, 2)}.)</p>`,
