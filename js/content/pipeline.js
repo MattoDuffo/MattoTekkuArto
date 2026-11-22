@@ -60,18 +60,18 @@ function drawRaster(ctx, size, W, Hc, tri, opts = {}) {
 
 /** Random triangle on a W×W grid with no pixel centre close to its border (so answers are unambiguous). */
 function rasterTri(rng, level) {
-  const W = [5, 7, 8][level - 1];
+  const W = [5, 6, 8][level - 1];
   const minArea = W * W * [0.22, 0.14, 0.07][level - 1];
-  for (let tries = 0; tries < 400; tries++) {
+  for (let tries = 0; tries < 4000; tries++) {
     const r = () => +rng.float(0.15, W - 0.15).toFixed(1);
     let tri = [[r(), r()], [r(), r()], [r(), r()]];
     const ar = edgeF(...tri) / 2;
-    if (Math.abs(ar) < minArea || Math.abs(ar) > W * W * 0.42) continue;
+    if (Math.abs(ar) < minArea || Math.abs(ar) > W * W * (level === 1 ? 0.42 : 0.3)) continue;
     if (ar < 0) tri = [tri[0], tri[2], tri[1]];
     let ok = true; const cov = new Set();
     for (let y = 0; y < W && ok; y++) for (let x = 0; x < W; x++) {
       const p = [x + 0.5, y + 0.5];
-      if (triDist(...tri, p) < 0.13) { ok = false; break; }
+      if (triDist(...tri, p) < 0.16) { ok = false; break; }
       if (inTri(...tri, p)) cov.add(x + ',' + y);
     }
     if (!ok || cov.size < 3) continue;
@@ -993,7 +993,7 @@ col = aWins ? vec3(0.95, 0.3, 0.3) : vec3(0.3, 0.5, 1.0);`, uniforms: { uS: v.s 
               sub: level === 3 ? 'The discs are tilted: their depth changes from left to right. Find the darkest spot.' : 'Each disc is a flat card at its own depth.',
               shader: { frag: `float z = 1.0;\n${glsl}\ncol = vec3(z);` },
               score: (u, v) => {
-                const err = depthAt(u, v) - zmin;
+                const z = depthAt(u, v), err = z - zmin;
                 return level === 3 ? (err < 0.04 ? 1 : err < 0.1 ? 0.5 : 0) : (Math.abs(z - best.d) < 1e-6 ? 1 : 0);
               },
               reveal: [level === 3 ? arg : best.c],

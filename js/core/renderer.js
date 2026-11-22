@@ -236,10 +236,10 @@ void main(){
   vec3 pos = aPos; vec3 normal = aNormal; vec2 uv = aUv;
   ${spec.vert || ''}
   vUv = uv;
-  vec4 w = uModel * vec4(pos, 1.0);
-  vWorld = w.xyz;
+  vec4 _w = uModel * vec4(pos, 1.0);
+  vWorld = _w.xyz;
   vNormal = (uModel * vec4(normal, 0.0)).xyz;
-  ${is3D ? 'gl_Position = uProj * uView * w;' : 'gl_Position = vec4(pos.xy, 0.0, 1.0);'}
+  ${is3D ? 'gl_Position = uProj * uView * _w;' : 'gl_Position = vec4(pos.xy, 0.0, 1.0);'}
 }`;
     let body = spec.frag || 'col = vec3(uv, 0.5);';
     const fullMain = /void\s+main\s*\(/.test(body);
