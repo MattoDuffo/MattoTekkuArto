@@ -278,7 +278,7 @@ void main(){
     } catch (e) {
       result = { error: e.message };
     }
-    if (this.programs.size > 400) { // simple cache trim
+    if (this.programs.size > 160) { // simple cache trim
       const first = this.programs.keys().next().value;
       const old = this.programs.get(first); if (old.prog) gl.deleteProgram(old.prog);
       this.programs.delete(first);
