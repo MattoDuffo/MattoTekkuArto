@@ -307,7 +307,7 @@ c *= 1.0 - smoothstep(r - soft, r, length(uv - 0.5)); // vignette</pre>
             if (kind === 'sat') {
               const l = rng.pick([0.4, 0.5]), c = rng.pick([0.8, 0.2, 0.6]), s = rng.pick([0, 0.5, 1.5, 2]);
               const ans = l + (c - l) * s;
-              return { prompt: `A pixel's luma is <b>${l}</b>, its red channel is <b>${c}</b>. Saturation <b>s = ${s}</b>. New red?`, code: `col = mix(vec3(luma(c)), c, ${f(s)});`, answer: +ans.toFixed(4), explain: `<p>mix(${l}, ${c}, ${s}) = ${l} + (${c} − ${l}) × ${s} = <b>${n3(ans)}</b>.${s > 1 ? ' s > 1 pushes the channel further away from grey: more colourful.' : s === 0 ? ' s = 0 → exactly the grey value.' : ''}</p>` };
+              return { prompt: `A pixel's luma is <b>${l}</b>, its red channel is <b>${c}</b>. Saturation <b>s = ${s}</b>. New red (before clamping)?`, code: `col = mix(vec3(luma(c)), c, ${f(s)});`, answer: +ans.toFixed(4), explain: `<p>mix(${l}, ${c}, ${s}) = ${l} + (${c} − ${l}) × ${s} = <b>${n3(ans)}</b>.${s > 1 ? ' s > 1 pushes the channel further away from grey: more colourful.' : s === 0 ? ' s = 0 → exactly the grey value.' : ''}</p>` };
             }
             const c = rng.pick([0.3, 0.6]), b = rng.pick([1.5, 2]), k = rng.pick([0.5, 2]);
             const c1 = c * b, raw = (c1 - 0.5) * k + 0.5;
@@ -319,23 +319,24 @@ c *= 1.0 - smoothstep(r - soft, r, length(uv - 0.5)); // vignette</pre>
           blurb: 'Compare before/after and name the colour adjustment.',
           gen: (rng, level) => {
             const all = [
-              { name: 'More contrast', g: [1, 1.8, 1], lvl: 1 },
-              { name: 'Less contrast', g: [1, 0.4, 1], lvl: 1 },
-              { name: 'Desaturated', g: [1, 1, 0.15], lvl: 1 },
-              { name: 'Brighter', g: [1.45, 1, 1], lvl: 1 },
-              { name: 'Darker', g: [0.55, 1, 1], lvl: 1 },
-              { name: 'Over-saturated', g: [1, 1, 2], lvl: 2 },
-              { name: 'Blue tint', g: [1, 1, 1], t: [0.6, 0.8, 1], lvl: 2 },
-              { name: 'Warm tint', g: [1, 1, 1], t: [1, 0.8, 0.55], lvl: 2 },
-              { name: 'Slightly less saturated', g: [1, 1, 0.6], lvl: 3 },
-              { name: 'Slightly more contrast', g: [1, 1.3, 1], lvl: 3 },
-              { name: 'Slightly brighter', g: [1.2, 1, 1], lvl: 3 },
+              { name: 'More contrast', fam: 'k+', g: [1, 1.8, 1], lvl: 1 },
+              { name: 'Less contrast', fam: 'k-', g: [1, 0.4, 1], lvl: 1 },
+              { name: 'Less saturated', fam: 's-', g: [1, 1, 0.15], lvl: 1 },
+              { name: 'Brighter', fam: 'b+', g: [1.45, 1, 1], lvl: 1 },
+              { name: 'Darker', fam: 'b-', g: [0.55, 1, 1], lvl: 1 },
+              { name: 'More saturated', fam: 's+', g: [1, 1, 2], lvl: 2 },
+              { name: 'Blue tint', fam: 'tb', g: [1, 1, 1], t: [0.6, 0.8, 1], lvl: 2 },
+              { name: 'Warm tint', fam: 'tw', g: [1, 1, 1], t: [1, 0.8, 0.55], lvl: 2 },
+              { name: 'Less saturated', fam: 's-', g: [1, 1, 0.6], lvl: 3 },
+              { name: 'More contrast', fam: 'k+', g: [1, 1.3, 1], lvl: 3 },
+              { name: 'Brighter', fam: 'b+', g: [1.2, 1, 1], lvl: 3 },
             ];
             const pool = all.filter((x) => x.lvl <= level);
             const ans = rng.pick(pool.filter((x) => x.lvl >= level - 1));
-            const opts = distinct(rng, ans, () => rng.pick(pool), 4, (x) => x.name);
+            const opts = distinct(rng, ans, () => rng.pick(pool), 4, (x) => x.fam);
             return {
               prompt: 'What was done to the frame?',
+              sub: level === 3 ? 'Subtle this time — compare carefully.' : '',
               shaders: [{ spec: post('col = scene(uv);'), label: 'before' }, { spec: gradeSpec(ans.g[0], ans.g[1], ans.g[2], ans.t || [1, 1, 1]), label: 'after' }],
               options: opts.map((o) => o.name),
               grid: false,
@@ -765,10 +766,10 @@ col = c * v;</pre>
 <pre class="code">vec2 p = uv - 0.5;
 p *= 1.0 + k * dot(p, p);
 vec2 q = p + 0.5;</pre>
-<p>k &gt; 0: pixels near the border read from <i>further out</i>, so straight lines bend inwards → <b>pincushion</b>. k &lt; 0: they read from <i>closer in</i>, so the middle bulges → <b>barrel</b> (fish-eye).</p>`,
-          controls: [{ name: 'k', label: 'k', min: -1.5, max: 1.5, step: 0.05, value: -0.8 }],
+<p>k &gt; 0: pixels near the border read from <i>further out</i>, so more of the image is squeezed into the edges and straight lines bulge outwards → <b>barrel</b> (fish-eye, old CRT). k &lt; 0: they read from <i>closer in</i>, lines bend inwards → <b>pincushion</b>.</p>`,
+          controls: [{ name: 'k', label: 'k', min: -1.5, max: 1.5, step: 0.05, value: 0.8 }],
           shader: (v) => ({ defs: SCENE, frag: 'vec2 p = uv - 0.5;\np *= 1.0 + uK * dot(p, p);\ncol = scene(p + 0.5);', uniforms: { uK: v.k }, textures: { uScene: { name: 'uvgrid', wrap: 'clamp' } } }),
-          code: (v) => `vec2 p = uv - 0.5;\np *= 1.0 + ${f(v.k, 2)} * dot(p, p);  // ${v.k < 0 ? 'barrel (bulge)' : v.k > 0 ? 'pincushion' : 'none'}\ncol = texture2D(uScene, p + 0.5).rgb;`,
+          code: (v) => `vec2 p = uv - 0.5;\np *= 1.0 + ${f(v.k, 2)} * dot(p, p);  // ${v.k > 0 ? 'barrel (bulge)' : v.k < 0 ? 'pincushion' : 'none'}\ncol = texture2D(uScene, p + 0.5).rgb;`,
           after: '<div class="tip">💡 Shown on a grid so the bending is obvious. VR headsets apply a barrel distortion to cancel the pincushion of their lenses!</div>',
         },
         {
@@ -787,14 +788,14 @@ vec2 q = p + 0.5;</pre>
           gen: (rng, level) => {
             const E = [
               { name: 'Chromatic aberration', frag: 'vec2 o = (uv - 0.5) * 0.06;\ncol = vec3(scene(uv + o).r, scene(uv).g, scene(uv - o).b);', lvl: 1 },
-              { name: 'Barrel distortion', frag: 'vec2 p = uv - 0.5; p *= 1.0 - 1.2 * dot(p, p);\ncol = scene(p + 0.5);', lvl: 1 },
+              { name: 'Barrel distortion', frag: 'vec2 p = uv - 0.5; p *= 1.0 + 1.2 * dot(p, p);\ncol = scene(p + 0.5);', lvl: 1 },
               { name: 'Vignette', frag: 'col = scene(uv) * (1.0 - smoothstep(0.3, 0.7, length(uv - 0.5)));', lvl: 1 },
               { name: 'Blur', frag: 'vec3 s = vec3(0.0);\nfor (int y = -1; y <= 1; y++) for (int x = -1; x <= 1; x++) s += scene(uv + vec2(float(x), float(y)) * 0.012);\ncol = s / 9.0;', lvl: 1 },
               { name: 'Edge detection', frag: 'vec2 e = vec2(0.006, 0.0);\nfloat dx = luma(scene(uv + e.xy)) - luma(scene(uv - e.xy));\nfloat dy = luma(scene(uv + e.yx)) - luma(scene(uv - e.yx));\ncol = vec3(length(vec2(dx, dy)) * 5.0);', lvl: 1 },
               { name: 'Wavy distortion', frag: 'col = scene(uv + vec2(0.02 * sin(uv.y * 40.0), 0.0));', lvl: 2 },
               { name: 'Desaturation', frag: 'vec3 c = scene(uv);\ncol = mix(vec3(luma(c)), c, 0.15);', lvl: 2 },
               { name: 'Glitch bands', frag: 'float b = floor(uv.y * 20.0); float r = hash(vec2(b, 3.0));\ncol = scene(uv + vec2((r - 0.5) * 0.15 * step(0.6, r), 0.0));', lvl: 2 },
-              { name: 'Pincushion distortion', frag: 'vec2 p = uv - 0.5; p *= 1.0 + 1.2 * dot(p, p);\ncol = scene(p + 0.5);', lvl: 3 },
+              { name: 'Pincushion distortion', frag: 'vec2 p = uv - 0.5; p *= 1.0 - 1.2 * dot(p, p);\ncol = scene(p + 0.5);', lvl: 3 },
               { name: 'Posterize', frag: 'col = floor(scene(uv) * 4.0) / 4.0;', lvl: 3 },
               { name: 'Sharpen', frag: 'vec3 c = scene(uv) * 5.0;\nvec2 e = vec2(0.006, 0.0);\nc -= scene(uv + e.xy) + scene(uv - e.xy) + scene(uv + e.yx) + scene(uv - e.yx);\ncol = c;', lvl: 3 },
             ];
@@ -820,7 +821,7 @@ vec2 q = p + 0.5;</pre>
             if (level >= 2) params.push({ name: 'k', label: 'distortion k', min: -1.2, max: 1.2, step: 0.05, target: level === 2 ? (k === 0 ? -0.5 : k) : k });
             const vals = (p) => [p.a, p.k ?? 0];
             return {
-              prompt: level === 1 ? 'How strong is the radial chromatic aberration?' : 'Match the aberration and the lens distortion (barrel −, pincushion +).',
+              prompt: level === 1 ? 'How strong is the radial chromatic aberration?' : 'Match the aberration and the lens distortion (k > 0 barrel, k < 0 pincushion).',
               params,
               build: (p) => { const [x, y] = vals(p); return post('vec2 p = uv - 0.5;\np *= 1.0 + uK * dot(p, p);\nvec2 q = p + 0.5;\nvec2 o = (uv - 0.5) * uA;\ncol = vec3(scene(q + o).r, scene(q).g, scene(q - o).b);', { uA: x, uK: y }); },
               code: (p) => { const [x, y] = vals(p); return `p *= 1.0 + ${f(y, 2)} * dot(p, p);\nvec2 o = (uv - 0.5) * ${f(x, 3)};`; },
