@@ -104,12 +104,16 @@ function quiz(q) {
   const exp = h('div.small', { style: { marginTop: '8px' } });
   let done = false;
   const opts = h('div.options');
-  q.options.forEach((o, i) => {
+  const order = q.options.map((_, i) => i).sort(() => Math.random() - 0.5);
+  const btns = [];
+  order.forEach((i) => {
+    const o = q.options[i];
     const b = h('button.opt', { html: String(o) });
+    btns[i] = b;
     b.onclick = () => {
       if (done) return; done = true;
       b.classList.add(i === q.answer ? 'right' : 'wrong');
-      opts.children[q.answer].classList.add('right');
+      btns[q.answer].classList.add('right');
       exp.innerHTML = (i === q.answer ? '✅ ' : '❌ ') + (q.explain || '');
     };
     opts.append(b);
