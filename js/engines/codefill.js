@@ -13,6 +13,8 @@
 import { h, shaderView, highlight } from '../core/ui.js';
 import { renderer } from '../core/renderer.js';
 
+const EMPTY = { frag: 'col = vec3(0.1 + 0.04 * checker(uv, 8.0));' };
+
 export default {
   id: 'codefill',
   defaultRounds: 5,
@@ -23,9 +25,8 @@ export default {
       const vals = item.slots.map(() => null);
       const target = item.target || (item.build ? item.build(answers) : null);
       let yView = null;
-      const placeholder = (i) => item.slots[i].placeholder ?? item.slots[i].options[0];
       if (target && !item.noTarget) {
-        yView = shaderView(item.build(vals.map((v, i) => v ?? placeholder(i))), { caption: 'Yours' });
+        yView = shaderView(EMPTY, { caption: 'Yours (fill all blanks)' });
         el.append(h('div.pair', shaderView(target, { caption: 'Target' }), yView));
       }
       let active = 0;
@@ -47,7 +48,7 @@ export default {
             const nextEmpty = vals.findIndex((v) => v == null);
             if (nextEmpty >= 0) active = nextEmpty;
             render();
-            if (yView) yView.update(item.build(vals.map((v, i) => v ?? placeholder(i))));
+            if (yView) yView.update(vals.some((v) => v == null) ? EMPTY : item.build(vals));
           },
         }, o)));
         btn.disabled = vals.some((v) => v == null);
