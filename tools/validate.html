@@ -41,7 +41,12 @@ function checkItem(item, game, where) {
     else {
       const a = item.answer ?? 0;
       if (a < 0 || a >= item.options.length) P('answer index out of range');
-      const keys = item.options.map((o) => JSON.stringify(o.shader ? [o.shader.frag, o.shader.uniforms] : o));
+      const keyOf = (o) => {
+        if (o && o.shader) return JSON.stringify([o.shader.frag, o.shader.vert, o.shader.uniforms, o.shader.textures, o.shader.mesh]);
+        if (o && o.graph) return 'g:' + o.graph.fns.map((fn) => [0, 0.13, 0.37, 0.5, 0.71, 0.93].map((x) => (+fn.f(x)).toFixed(3)).join()).join('|');
+        return JSON.stringify(o);
+      };
+      const keys = item.options.map(keyOf);
       if (new Set(keys).size !== keys.length) P('duplicate options');
       item.options.forEach((o, i) => o && o.shader && compile(o.shader, where + ' option ' + i));
     }

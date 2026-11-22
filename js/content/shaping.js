@@ -12,8 +12,9 @@ const imgCode = (e) => (/\bx\b/.test(e.replace(/uv\.x/g, '')) ? `float x = uv.x;
 
 /** Paints y = expr(x) as brightness AND draws its curve in orange on top. */
 const plotSpec = (expr, uniforms, defs) => ({
-  frag: `float x = uv.x;\nfloat y = ${expr};\ncol = vec3(clamp(y, 0.0, 1.0)) * 0.8;\ncol = mix(col, vec3(1.0, 0.45, 0.15), 1.0 - smoothstep(0.004, 0.014, abs(uv.y - y)));`,
-  uniforms, defs,
+  defs: `${defs || ''}\nfloat plotF(float x){ return ${expr}; }`,
+  frag: `float x = uv.x;\nfloat y = plotF(x);\ncol = vec3(clamp(y, 0.0, 1.0)) * 0.8;\n// distance to the curve, corrected for its slope\nfloat dy = (plotF(x + 0.003) - plotF(x - 0.003)) / 0.006;\nfloat d = abs(uv.y - y) / sqrt(1.0 + dy * dy);\ncol = mix(col, vec3(1.0, 0.45, 0.15), 1.0 - smoothstep(0.004, 0.011, d));`,
+  uniforms,
 });
 
 /** Neutral grid to tap on when the picture should NOT give the answer away (lines every 0.25, faint every 0.05). */
@@ -201,7 +202,8 @@ col = vec3(y);   // y = f(x)</pre>
         {
           title: 'Both at once',
           body: `<p>Trick used all over shader tutorials: paint the brightness <b>and</b> draw the curve on top in a second colour. Then you can read the function straight off the image.</p>
-<p>The orange line is drawn where the pixel's <code>uv.y</code> is close to <code>y</code>: "am I near the curve?"</p>`,
+<p>The orange line is drawn where the pixel's <code>uv.y</code> is close to <code>y</code>: "am I near the curve?"</p>
+<p class="small dim">(The demos in this app also correct the distance for the curve's slope, so steep parts don't get thin.)</p>`,
           controls: [{ name: 'k', label: 'function #', min: 0, max: DEMO_FNS.length - 1, step: 1, value: 4 }],
           shader: (v) => plotSpec(demoFn(v).e),
           code: (v) => `float x = uv.x;\nfloat y = ${demoFn(v).e};\ncol = vec3(y);\n// orange where uv.y is within ~0.01 of y:\nfloat line = 1.0 - smoothstep(0.004, 0.014, abs(uv.y - y));\ncol = mix(col, vec3(1.0, 0.45, 0.15), line);`,
@@ -301,7 +303,7 @@ col = vec3(y);   // y = f(x)</pre>
               prompt: `<code>float x = uv.x;<br>y = ${fn.e};</code><br>Tap where <b>y = ${n(t)}</b>.`,
               sub: helper ? 'The orange curve is the graph. Find where it crosses the dashed height.' : 'The picture is just a grid (lines every 0.25). Work out x yourself!',
               shader: helper
-                ? { frag: plotSpec(fn.e).frag + `\nfloat dash = step(0.5, fract(uv.x * 20.0)) * (1.0 - smoothstep(0.003, 0.008, abs(uv.y - ${f(t)})));\ncol = mix(col, vec3(0.4, 0.9, 1.0), dash);` }
+                ? { ...plotSpec(fn.e), frag: plotSpec(fn.e).frag + `\nfloat dash = step(0.5, fract(uv.x * 20.0)) * (1.0 - smoothstep(0.003, 0.008, abs(uv.y - ${f(t)})));\ncol = mix(col, vec3(0.4, 0.9, 1.0), dash);` }
                 : GRID,
               score: scoreU([xs], 0.04),
               reveal: [[xs, t]],

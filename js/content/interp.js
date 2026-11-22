@@ -7,7 +7,8 @@ const lvlPool = (arr, level) => arr.filter((x) => (x.lvl || 1) <= level);
 
 /** Paint y = expr(x) as brightness and draw its curve on top (x = uv.x). */
 const plotSpec = (expr, uniforms) => ({
-  frag: `float x = uv.x;\nfloat y = ${expr};\ncol = vec3(clamp(y, 0.0, 1.0)) * 0.8;\ncol = mix(col, vec3(1.0, 0.45, 0.15), 1.0 - smoothstep(0.004, 0.014, abs(uv.y - y)));`,
+  defs: `float plotF(float x){ return ${expr}; }`,
+  frag: `float x = uv.x;\nfloat y = plotF(x);\ncol = vec3(clamp(y, 0.0, 1.0)) * 0.8;\n// distance to the curve, corrected for its slope\nfloat dy = (plotF(x + 0.003) - plotF(x - 0.003)) / 0.006;\nfloat d = abs(uv.y - y) / sqrt(1.0 + dy * dy);\ncol = mix(col, vec3(1.0, 0.45, 0.15), 1.0 - smoothstep(0.004, 0.011, d));`,
   uniforms,
 });
 

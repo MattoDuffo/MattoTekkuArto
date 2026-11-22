@@ -17,6 +17,7 @@ export function media(item, opts = {}) {
   }
   if (item.graph) out.push(graph(item.graph.fns, item.graph.opts || {}, 320));
   if (item.color) out.push(h('div', { style: { width: '120px', margin: '8px auto' } }, swatch(item.color)));
+  if (item.colors) out.push(h('div', { style: { display: 'flex', gap: '8px', justifyContent: 'center', margin: '8px 0' } }, item.colors.map((c) => h('div', { style: { width: '72px' } }, swatch(c)))));
   if (item.visual) { const d = h('div'); item.visual(d); out.push(d); }
   return out;
 }
