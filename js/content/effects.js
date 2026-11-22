@@ -682,7 +682,7 @@ const fire = {
           { tpl: BASE.replace('pow(saturate(1.0 - uv.y), 0.7)', 'pow(saturate([[0]]), 0.7)'), slots: [{ options: ['1.0 - uv.y', 'uv.y', '1.0', 'uv.x'], answer: '1.0 - uv.y' }], why: 'The fire is strongest at the <b>bottom</b>, so the mask is 1 − uv.y (1 at the bottom, 0 at the top).' },
           { tpl: BASE.replace('mask - n * 1.0', 'mask [[0]] n * 1.0'), slots: [{ options: ['-', '+', '*'], answer: '-' }], why: 'Subtracting noise <b>erodes</b> the mask into tongues. Adding would just make a bigger blurry blob.', lvl: 2 },
           { tpl: BASE.replace('vec3(heat, heat * heat, heat * heat * heat)', 'vec3([[0]], [[1]], heat * heat * heat)'), slots: [{ options: ['heat', 'heat * heat', 'heat * heat * heat'], answer: 'heat' }, { options: ['heat * heat', 'heat', 'heat * heat * heat'], answer: 'heat * heat' }], why: 'Red = heat (rises first), green = heat² (second), blue = heat³ (last).', lvl: 2 },
-          { tpl: BASE.replace('float side = saturate(1.0 - abs(uv.x - 0.5) * 2.2);', 'float side = saturate(1.0 - [[0]](uv.x - 0.5) * 2.4);').replace('vec2(uv.x * 4.0, uv.y * 3.0', 'vec2(uv.x * 4.0, [[1]] * 3.0'), slots: [{ options: ['abs', 'sign', 'fract', 'floor'], answer: 'abs' }, { options: ['uv.y', 'uv.x', '1.0'], answer: 'uv.y' }], why: '<code>abs(uv.x − 0.5)</code> is the distance from the centre line (0 in the middle, 0.5 at the sides).', lvl: 3 },
+          { tpl: BASE.replace('float side = saturate(1.0 - abs(uv.x - 0.5) * 2.2);', 'float side = saturate(1.0 - [[0]](uv.x - 0.5) * 2.4);').replace('vec2(uv.x * 4.0, uv.y * 3.0', 'vec2(uv.x * 4.0, [[1]] * 3.0'), slots: [{ options: ['abs', 'sign', 'fract', 'floor'], answer: 'abs' }, { options: ['uv.y', 'uv.x', '1.0'], answer: 'uv.y' }], why: '<code>abs(uv.x − 0.5)</code> is the distance from the centre line (0 in the middle, 0.5 at the sides). The noise must scroll along <b>uv.y</b> (with − uTime) so it rises.', lvl: 3 },
         ].filter((x) => (x.lvl || 1) <= level);
         const vr = rng.pick(V);
         return {
@@ -1764,7 +1764,8 @@ const triplanar = {
         const desc = { X: 'side (along X)', Y: 'top/bottom (along Y)', Z: 'front/back (along Z)' };
         return {
           prompt: `A pixel has normal <code>N = (${Ns})</code>. Which texture lookup gets the biggest weight?`,
-          options: [...[ax, ...axes.filter((x) => x !== ax)].map((x) => ({ code: `texture2D(uTex, ${x.c})  // ${x.a}` })), { code: 'texture2D(uTex, uv)  // mesh UVs' }],
+          options: [...[ax, ...axes.filter((x) => x !== ax)].map((x) => ({ code: `texture2D(uTex, ${x.c})${level === 1 ? `  // ${x.a}` : ''}` })), { code: `texture2D(uTex, uv)${level === 1 ? '  // mesh UVs' : ''}` }],
+          sub: level === 1 ? undefined : 'Each projection uses the two axes it does NOT look along.',
           explain: `<p>The biggest |component| of N is <b>${ax.a}</b> (|${n(N[ax.i], 2)}|) → the projection ${desc[ax.a]} uses <code>${ax.c}</code> — the two <i>other</i> axes.</p><p>The sign doesn't matter thanks to abs(): +${ax.a} and −${ax.a} faces both use it.</p>`,
         };
       },

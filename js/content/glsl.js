@@ -230,11 +230,9 @@ pow(x, 2)           // ✗ pow(float, int) doesn't exist</pre>
         },
         {
           title: 'See the error yourself',
-          body: `<p>Here are two versions of the same shader. The right one uses <code>2</code> instead of <code>2.0</code>, and the preview shows the real compiler error:</p>`,
-          shaders: [
-            { spec: { frag: 'col = vec3(uv.x * 2.0 - 0.5);' }, label: '<code>uv.x * 2.0</code> ✓' },
-            { spec: { frag: 'void main(){ vec2 uv = vUv; gl_FragColor = vec4(vec3(uv.x * 2.0 - 0.5), 1.0); }' }, label: '…same shader, written out fully' },
-          ],
+          body: `<p>The shader below works with <code>2.0</code>. Write <code>2</code> instead and WebGL refuses to compile it. This is the real error message you'd get:</p>`,
+          shader: { frag: 'col = vec3(uv.x * 2.0 - 0.5);' },
+          caption: 'with 2.0 ✓',
           code: '// try it in the Playground:\ncol = vec3(uv.x * 2 - 0.5);\n// ERROR: \'*\' : wrong operand types - no operation \'*\' exists\n//        that takes a left-hand operand of type \'float\'\n//        and a right operand of type \'const int\'',
           after: '<p>Read errors calmly: "wrong operand types … float … int" = you mixed a float and an int. Find the number without a dot.</p>',
         },
@@ -609,7 +607,7 @@ col.b  = 1.0;     // now blue = 1</pre>
             const a = [0.2, 0.5], b = [x.x, x.y], s = G.add(a, b);
             el.append(h('pre.code', { html: `a     = (${n(a[0], 2)}, ${n(a[1], 2)})\nb     = (${n(b[0], 2)}, ${n(b[1], 2)})\n<b>a + b = (${n(a[0], 2)}${b[0] < 0 ? '' : '+'}${n(b[0], 2)}, ${n(a[1], 2)}${b[1] < 0 ? '' : '+'}${n(b[1], 2)}) = (${n(s[0], 2)}, ${n(s[1], 2)})</b>` }));
           },
-          shader: (x) => ({ frag: 'vec2 a = vec2(0.2, 0.5);\nvec2 s = a + uB;\ncol = vec3(0.1) + 0.1 * step(abs(uv.x - 0.5), 0.003) + 0.1 * step(abs(uv.y - 0.5), 0.003);\nvec2 P = (uv - 0.5) * 2.0;\ncol = mix(col, vec3(1.0, 0.85, 0.4), step(length(P - a), 0.04));\ncol = mix(col, vec3(0.4, 0.85, 1.0), step(length(P - uB), 0.04));\ncol = mix(col, vec3(0.5, 1.0, 0.5), step(length(P - s), 0.05));', uniforms: { uB: [x.x, x.y] } }),
+          shader: (x) => ({ frag: 'vec2 a = vec2(0.2, 0.5);\nvec2 s = a + uB;\ncol = vec3(0.1) + 0.1 * step(abs(uv.x - 0.5), 0.003) + 0.1 * step(abs(uv.y - 0.5), 0.003);\nvec2 q = (uv - 0.5) * 2.0;\ncol = mix(col, vec3(1.0, 0.85, 0.4), step(length(q - a), 0.04));\ncol = mix(col, vec3(0.4, 0.85, 1.0), step(length(q - uB), 0.04));\ncol = mix(col, vec3(0.5, 1.0, 0.5), step(length(q - s), 0.05));', uniforms: { uB: [x.x, x.y] } }),
           after: '<p class="small">Dots (−1..1 space): <span style="color:#ffd479">a</span>, <span style="color:#6bdfff">b</span>, <span style="color:#80ff80">a + b</span>.</p>',
         },
         {
@@ -695,7 +693,7 @@ vec4 * vec3   ✗        vec3 * 2      ✗ (int!)</pre>
             ];
             const pool = level === 1 ? ops.slice(0, 3) : ops;
             const ans = rng.pick(pool.slice(0, 2).concat(level === 3 ? pool : []));
-            const wrongs = [...ops.filter((o) => o !== ans).map((o) => o.r), fmtVec(G.mul(a, G.dot(a, b) ? 1 : 0).map((_, i) => a[i] + b[i] * 0 + (i ? 0 : 1))), f(G.dot(a, b) + 1, 2)];
+            const wrongs = [...ops.filter((o) => o !== ans).map((o) => o.r), fmtVec(G.add(G.mul(a, b), 1)), f(G.dot(a, b) + 1, 2)];
             const opts = distinct(rng, ans.r, (r, i) => wrongs[i % wrongs.length], 4);
             return {
               prompt: `<code>vec${len} a = ${fmtVec(a)};</code><br><code>vec${len} b = ${fmtVec(b)};</code><br>What is <code>${ans.code}</code>?`,
@@ -955,7 +953,7 @@ uv           TexCoord             UV</pre>
               { code: 'inversesqrt(x)', bucket: 0 }, { code: 'mul(M, v)', bucket: 1 },
               { code: 'saturate(x)', bucket: 1, why: 'Not built into GLSL (this app adds one for convenience). GLSL: clamp(x, 0.0, 1.0).' },
               { code: 'half3', bucket: 1, why: 'HLSL low-precision type. GLSL uses mediump.' },
-            ].sort(() => 0).slice(0, 20),
+            ],
             explain: '<p>Mnemonic: HLSL names are short and "C-like" (lerp, frac, float3); GLSL names read like words (mix, fract, vec3).</p>',
           }),
         },
@@ -968,7 +966,7 @@ uv           TexCoord             UV</pre>
             const label = { glsl: 'GLSL', hlsl: 'HLSL', ue: 'an Unreal material node', unity: 'a Unity Shader Graph node' };
             const rows = DICT.filter((r) => r[from] !== r[to] && !r[to].startsWith('(') && !r[from].startsWith('('));
             const row = rng.pick(rows.slice(0, level === 1 ? 10 : rows.length));
-            const opts = distinct(rng, row[to], (r) => r.pick(DICT)[to], 4);
+            const opts = distinct(rng, row[to], (r) => { const w = r.pick(DICT)[to]; return w.startsWith('(') ? null : w; }, 4);
             const isCode = (k) => k === 'glsl' || k === 'hlsl';
             return {
               prompt: `<b>${label[from]}</b>: <code>${row[from].replace(/</g, '&lt;')}</code><br>What is it in <b>${label[to]}</b>?`,

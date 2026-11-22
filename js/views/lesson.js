@@ -33,6 +33,8 @@ export function lessonView(root, cid, query) {
   let i = query.get('slide') ? +query.get('slide') : 0;
   if (rec && !rec.lessonDone && rec.lessonSeen > 0 && rec.lessonSeen < slides.length && !query.get('slide')) i = Math.max(0, rec.lessonSeen - 1);
   const fromPath = query.get('path') === '1';
+  i = Math.max(0, Math.min(slides.length - 1, i || 0));
+  if (!slides.length) return root.append(h('p', 'No lesson for this concept.'));
 
   root.append(topbar('📖 ' + c.title, '#/concept/' + cid));
   const dots = h('div.slide-dots');
