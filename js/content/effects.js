@@ -1111,27 +1111,37 @@ const toon = {
 };
 
 // ================================================================ WATER
-const WATER_STEPS = ['<b>Depth colour</b> — shallow turquoise → deep blue', '<b>UV distortion</b> — wobble coordinates with scrolling noise', '<b>Scrolling normals</b> — two normal-map layers → sparkles', '<b>Foam</b> — noise threshold near the shore'];
+const WATER_STEPS = ['<b>Depth colour</b> — shallow turquoise → deep blue', '<b>UV distortion</b> — wobble coordinates with scrolling noise', '<b>Scrolling normals</b> — two wave layers → sparkles', '<b>Foam</b> — noise threshold near the shore'];
+// Two scrolling height layers; the normal is the slope of their sum.
+// (In an engine you'd scroll a water normal-map texture twice instead.)
+const WATER_DEFS = `float layerA(vec2 p){ return vnoise(p * 12.0 + vec2(uTime * 0.6, 0.0)); }
+float layerB(vec2 p){ return vnoise(p * 17.0 - vec2(0.0, uTime * 0.7)); }
+float waves(vec2 p, float two){ return layerA(p) + layerB(p) * two; }
+vec3 waveNormal(vec2 p, float two){
+  float e = 0.004;
+  float h = waves(p, two);
+  float dx = waves(p + vec2(e, 0.0), two) - h;
+  float dy = waves(p + vec2(0.0, e), two) - h;
+  return normalize(vec3(-dx, -dy, e * 25.0));   // slope → tilted normal
+}`;
 const WATER_FRAG = `vec2 off = (vec2(vnoise(uv * 8.0 + uTime * 0.6), vnoise(uv * 8.0 - uTime * 0.5 + 4.0)) - 0.5) * uStr;
 vec2 wuv = uv + off;
 float d = length(wuv - 0.5) * 2.0 + (vnoise(wuv * 5.0) - 0.5) * 0.3;
 float depth = saturate((d - 0.4) / uRange);
 vec3 water = mix(vec3(0.25, 0.85, 0.8), vec3(0.02, 0.12, 0.38), depth);
-vec3 n1 = texture2D(uNrm, uv * 3.0 + vec2(uTime * 0.04, 0.0)).rgb * 2.0 - 1.0;
-vec3 n2 = texture2D(uNrm, uv * 2.0 - vec2(0.0, uTime * 0.05)).rgb * 2.0 - 1.0;
-vec3 wn = normalize(n1 + n2);
+vec3 wn = waveNormal(uv, 1.0);
 float spec = pow(saturate(dot(wn, normalize(vec3(0.4, 0.5, 1.0)))), 40.0);
 float foam = step(vnoise(uv * 40.0 + uTime * 0.4), 1.0 - depth / uFoam);
 vec3 c = saturate(water + spec * uSpec + foam);
 col = d < 0.4 ? vec3(0.9, 0.8, 0.55) : c;`;
-const waterSpec = (p = {}) => ({ frag: WATER_FRAG, textures: { uNrm: 'normalmap' }, uniforms: { uStr: p.str ?? 0.04, uRange: p.range ?? 0.5, uFoam: p.foam ?? 0.12, uSpec: p.spec ?? 0.8 } });
+const waterSpec = (p = {}) => ({ frag: WATER_FRAG, defs: WATER_DEFS, uniforms: { uStr: p.str ?? 0.04, uRange: p.range ?? 0.5, uFoam: p.foam ?? 0.2, uSpec: p.spec ?? 0.8 } });
 const waterCode = (p = {}) => `vec2 off = (noise2(uv * 8.0 + time) - 0.5) * ${f(p.str ?? 0.04, 3)};   // distortion
 float d = distanceFromIsland(uv + off);
 float depth = saturate((d - 0.4) / ${f(p.range ?? 0.5, 2)});
 vec3 water = mix(shallowCol, deepCol, depth);
-vec3 wn = normalize(normalA + normalB);   // two scrolling layers
+vec3 wn = waveNormal(uv);   // slope of two scrolling layers
 float spec = pow(saturate(dot(wn, L)), 40.0);
-float foam = step(vnoise(uv * 40.0 + uTime * 0.4), 1.0 - depth / ${f(p.foam ?? 0.12, 2)});
+float foam = step(vnoise(uv * 40.0 + uTime * 0.4), 1.0 - depth / ${f(p.foam ?? 0.2, 2)});
 col = water + spec * ${f(p.spec ?? 0.8, 1)} + foam;`;
 const DEPTH_ONLY = `float d = length(uv - 0.5) * 2.0 + (vnoise(uv * 5.0) - 0.5) * 0.3;
 float depth = saturate((d - 0.4) / uRange);
@@ -1172,12 +1182,13 @@ const water = {
     },
     {
       title: 'Layer 3: scrolling normals',
-      body: `<p>Small waves are mostly about <b>light</b>: their tilted surfaces catch the sun → sparkles. We read a <b>normal map</b> (decode <code>× 2 − 1</code>) and light it.</p>
+      body: `<p>Small waves are mostly about <b>light</b>: their tilted surfaces catch the sun → sparkles. We need a <b>normal</b> per pixel and then light it.</p>
+<p>In an engine you'd sample a water <b>normal-map texture</b> (decode <code>× 2 − 1</code>). Here we build the same thing from noise: a height field, and its <b>slope</b> = how much the normal tilts.</p>
 <p>One scrolling layer looks like a sliding sticker. <b>Two layers</b> at different scales, scrolling different ways, added and normalised → the bumps interfere and the pattern never repeats exactly. (Same trick as the lava!)</p>`,
       controls: [{ name: 't', label: 'second layer (0 = off, 1 = on)', min: 0, max: 1, step: 1, value: 1 }],
-      shader: (v) => ({ frag: 'vec3 n1 = texture2D(uNrm, uv * 3.0 + vec2(uTime * 0.04, 0.0)).rgb * 2.0 - 1.0;\nvec3 n2 = texture2D(uNrm, uv * 2.0 - vec2(0.0, uTime * 0.05)).rgb * 2.0 - 1.0;\nvec3 wn = normalize(n1 + n2 * uTwo + vec3(0.0, 0.0, 1.0 - uTwo));\nfloat spec = pow(saturate(dot(wn, normalize(vec3(0.4, 0.5, 1.0)))), 40.0);\nfloat diff = saturate(dot(wn, normalize(vec3(0.4, 0.5, 1.0))));\ncol = vec3(0.02, 0.12, 0.38) * (0.6 + 0.6 * diff) + spec;', textures: { uNrm: 'normalmap' }, uniforms: { uTwo: v.t } }),
-      code: (v) => `vec3 n1 = texture2D(uNrm, uv * 3.0 + vec2(uTime * 0.04, 0.0)).rgb * 2.0 - 1.0;\n${v.t ? 'vec3 n2 = texture2D(uNrm, uv * 2.0 - vec2(0.0, uTime * 0.05)).rgb * 2.0 - 1.0;\nvec3 wn = normalize(n1 + n2);' : 'vec3 wn = normalize(n1);   // one layer only'}\nfloat spec = pow(saturate(dot(wn, L)), 40.0);\ncol = deepCol * (0.6 + 0.6 * diffuse) + spec;`,
-      after: recipe('Water', WATER_STEPS, 2) + '<p class="small dim">(Our built-in normal map is a grid of round bumps, so the pattern is a bit "bubbly". A real water normal map has random ripples.)</p>',
+      shader: (v) => ({ defs: WATER_DEFS, frag: 'vec3 wn = waveNormal(uv, uTwo);\nfloat spec = pow(saturate(dot(wn, normalize(vec3(0.4, 0.5, 1.0)))), 40.0);\nfloat diff = saturate(dot(wn, normalize(vec3(0.4, 0.5, 1.0))));\ncol = vec3(0.02, 0.12, 0.38) * (0.6 + 0.6 * diff) + spec;', uniforms: { uTwo: v.t } }),
+      code: (v) => `float layerA(vec2 p) { return vnoise(p * 12.0 + vec2(uTime * 0.6, 0.0)); }\nfloat layerB(vec2 p) { return vnoise(p * 17.0 - vec2(0.0, uTime * 0.7)); }\n// height = ${v.t ? 'layerA + layerB' : 'layerA only'}\nvec3 wn = normal from the slope of the height;\nfloat spec = pow(saturate(dot(wn, L)), 40.0);\ncol = deepCol * (0.6 + 0.6 * diffuse) + spec;`,
+      after: recipe('Water', WATER_STEPS, 2) + '<p class="small dim">Engine version: <code>vec3 n1 = texture2D(uNrm, uv * 3.0 + t * dirA).rgb * 2.0 - 1.0;</code> and the same with another scale/direction for n2, then <code>normalize(n1 + n2)</code>.</p>',
     },
     {
       title: 'Layer 4: shoreline foam',
@@ -1186,7 +1197,7 @@ const water = {
 // at the shore (depth 0):  1.0 → almost all noise passes → solid foam
 // further out:  smaller → only the darkest noise passes → foam breaks up
 // beyond foamWidth: negative → no foam</pre>`,
-      controls: [{ name: 'w', label: 'foam width', min: 0.01, max: 0.4, step: 0.01, value: 0.12 }],
+      controls: [{ name: 'w', label: 'foam width', min: 0.01, max: 0.4, step: 0.01, value: 0.2 }],
       shader: (v) => ({ frag: `${DEPTH_ONLY}\nfloat foam = step(vnoise(uv * 40.0 + uTime * 0.4), 1.0 - depth / uFoam);\ncol = d < 0.4 ? vec3(0.9, 0.8, 0.55) : saturate(water + foam);`, uniforms: { uRange: 0.5, uFoam: v.w } }),
       code: (v) => `float foam = step(vnoise(uv * 40.0 + uTime * 0.4), 1.0 - depth / ${f(v.w, 2)});\ncol = water + foam;`,
       after: recipe('Water', WATER_STEPS, 3),
@@ -1199,7 +1210,7 @@ const water = {
         { name: 'r', label: 'depth range', min: 0.05, max: 1, step: 0.01, value: 0.5 },
         { name: 's', label: 'distortion', min: 0, max: 0.12, step: 0.005, value: 0.04 },
         { name: 'p', label: 'sparkle', min: 0, max: 2, step: 0.05, value: 0.8 },
-        { name: 'w', label: 'foam width', min: 0.01, max: 0.4, step: 0.01, value: 0.12 },
+        { name: 'w', label: 'foam width', min: 0.01, max: 0.4, step: 0.01, value: 0.2 },
       ],
       shader: (v) => waterSpec({ range: v.r, str: v.s, spec: v.p, foam: v.w }),
       code: (v) => waterCode({ range: v.r, str: v.s, spec: v.p, foam: v.w }),
@@ -1237,7 +1248,7 @@ const water = {
         const params = [{ name: 'range', label: 'depth range', min: 0.05, max: 1, step: 0.01, target: t.range }];
         if (level >= 2) params.push({ name: 'foam', label: 'foam width', min: 0.01, max: 0.4, step: 0.01, target: t.foam });
         if (level === 3) params.push({ name: 'str', label: 'distortion', min: 0, max: 0.12, step: 0.005, target: t.str });
-        const P = (p) => ({ range: p.range, foam: p.foam ?? 0.12, str: p.str ?? 0.03 });
+        const P = (p) => ({ range: p.range, foam: p.foam ?? 0.2, str: p.str ?? 0.03 });
         return {
           prompt: 'Make your lagoon match the target.',
           sub: 'Range: how quickly turquoise turns to deep blue. Foam: how far the white reaches.',
@@ -1658,8 +1669,8 @@ const triplanar = {
       body: `<p>UVs are hand-made. On procedural rocks, cliffs, terrain or sculpted meshes there are often <b>no good UVs</b>: textures stretch, pinch at poles or show seams.</p>
 <p>Left: a sphere with ordinary UVs — look at the pinching at the top and the stretched rows. Right: the same sphere <b>triplanar-mapped</b>: evenly sized bricks everywhere, no UVs used at all.</p>`,
       shaders: [
-        { spec: { frag: `col = texture2D(uTex, uv * vec2(4.0, 2.0)).rgb;\n${LIT}`, mesh: 'sphere', camera: CAM, textures: { uTex: 'brick' } }, caption: 'mesh UVs' },
-        { spec: triSpec(), caption: 'triplanar' },
+        { spec: { frag: `col = texture2D(uTex, uv * vec2(4.0, 2.0)).rgb;\n${LIT}`, mesh: 'sphere', camera: { ...CAM, pitch: 0.9 }, textures: { uTex: 'brick' } }, caption: 'mesh UVs' },
+        { spec: { ...triSpec(), camera: { ...CAM, pitch: 0.9 } }, caption: 'triplanar' },
       ],
       after: recipe('Triplanar', TRI_STEPS),
     },

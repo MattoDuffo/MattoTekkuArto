@@ -179,8 +179,8 @@ pos.x += sway * weight;                    // wind, weight 0 at root → 1 at ti
             { name: 'r', label: 'turn', min: 0, max: 3.14, step: 0.01, value: 0.4 },
           ],
           shaders: [
-            { spec: (v) => ({ mesh: 'cube', model: TRS(v.x, v.r, 0.8), frag: LIT('mix(vec3(0.95, 0.6, 0.25), vec3(0.25), checker(uv, 4.0))'), camera: { dist: 4.2, yaw: 0.5 } }), label: 'object space: <code>checker(uv)</code>' },
-            { spec: (v) => ({ mesh: 'cube', model: TRS(v.x, v.r, 0.8), frag: 'float k = mod(floor(P.x * 3.0) + floor(P.y * 3.0) + floor(P.z * 3.0), 2.0);\n' + LIT('mix(vec3(0.3, 0.7, 1.0), vec3(0.25), k)'), camera: { dist: 4.2, yaw: 0.5 } }), label: 'world space: checker of <code>P</code>' },
+            { spec: (v) => ({ mesh: 'cube', model: TRS(v.x, v.r, 1), frag: LIT('mix(vec3(0.95, 0.6, 0.25), vec3(0.25), checker(uv, 4.0))'), camera: { dist: 3.6, yaw: 0.5 } }), label: 'object space: <code>checker(uv)</code>' },
+            { spec: (v) => ({ mesh: 'cube', model: TRS(v.x, v.r, 1), frag: 'float k = mod(floor(P.x * 3.0) + floor(P.y * 3.0) + floor(P.z * 3.0), 2.0);\n' + LIT('mix(vec3(0.3, 0.7, 1.0), vec3(0.25), k)'), camera: { dist: 3.6, yaw: 0.5 } }), label: 'world space: checker of <code>P</code>' },
           ],
           after: '<div class="tip">World-space patterns are great for things that should line up across many objects (triplanar rock, world-aligned moss, puddles). Object-space is for things that belong to the object (decals, logos, wear).</div>',
         },
@@ -282,7 +282,7 @@ pos.x += sway * weight;                    // wind, weight 0 at root → 1 at ti
             { name: 'r', label: 'rotate y (rad)', min: 0, max: 3.14, step: 0.01, value: 0.5 },
             { name: 's', label: 'scale', min: 0.4, max: 1.4, step: 0.01, value: 0.8 },
           ],
-          shader: (v) => ({ mesh: 'cube', model: TRS(v.x, v.r, v.s), frag: LIT('mix(vec3(1.0, 0.6, 0.3), vec3(0.3, 0.6, 1.0), uv.x)'), camera: { dist: 4.5, yaw: 0.4 } }),
+          shader: (v) => ({ mesh: 'cube', model: TRS(v.x, v.r, v.s), frag: LIT('mix(vec3(1.0, 0.6, 0.3), vec3(0.3, 0.6, 1.0), uv.x)'), camera: { dist: 3.7, yaw: 0.4 } }),
           code: (v) => `// Model = Translate × Rotate × Scale\n${showMat(TRS(v.x, v.r, v.s))}\nworld = Model * vec4(pos, 1.0);`,
         },
         {
@@ -291,7 +291,7 @@ pos.x += sway * weight;                    // wind, weight 0 at root → 1 at ti
 <div class="analogy">🚂 <b>Analogy:</b> sitting in a train, you can't tell if your train moves right or the station moves left. Moving the camera right = moving the world left. The view matrix is the camera's transform, <b>inverted</b>.</div>
 <p>Orbit the camera: the cube's model matrix doesn't change at all, only the view matrix does.</p>`,
           controls: [{ name: 'y', label: 'camera orbit', min: -3.14, max: 3.14, step: 0.01, value: 0.6 }],
-          shader: (v) => ({ mesh: 'cube', frag: LIT('mix(vec3(1.0, 0.6, 0.3), vec3(0.3, 0.6, 1.0), uv.x)'), camera: { yaw: v.y, dist: 4 } }),
+          shader: (v) => ({ mesh: 'cube', frag: LIT('mix(vec3(1.0, 0.6, 0.3), vec3(0.3, 0.6, 1.0), uv.x)'), camera: { yaw: v.y, dist: 3.4 } }),
           code: (v) => `model matrix: unchanged (identity)\ncamera yaw = ${v.y.toFixed(2)} rad\nview = inverse(cameraTransform)  // world spins by ${(-v.y).toFixed(2)}`,
         },
         {

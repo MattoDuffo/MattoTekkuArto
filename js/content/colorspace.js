@@ -11,7 +11,7 @@ const ENC = (e) => `pow(${e}, vec3(1.0 / 2.2))`;
 const swatchRow = (items) => (el) => {
   const row = h('div', { style: { display: 'flex', gap: '10px', justifyContent: 'center', alignItems: 'flex-end', margin: '8px 0', flexWrap: 'wrap' } });
   items.forEach(([label, c]) => {
-    if (typeof c === 'string') { row.append(h('div', { style: { fontSize: '22px', paddingBottom: '22px' } }, c)); return; }
+    if (typeof c === 'string') { row.append(h('div', { style: { textAlign: 'center', maxWidth: '150px' }, html: (label ? `<div class="small dim">${label}</div>` : '') + `<div style="font-size:22px">${c}</div>` })); return; }
     row.append(h('div', { style: { textAlign: 'center' } },
       h('div', { style: { width: '64px', height: '46px', borderRadius: '8px', background: css(c), border: '1px solid #333' } }),
       h('div.small.dim', { html: label })));
@@ -21,7 +21,7 @@ const swatchRow = (items) => (el) => {
 
 /** a small 0..1 ruler at the bottom of a gradient so learners can read positions */
 const RULER = `if (uv.y < 0.07) {
-  float tk = step(abs(fract(uv.x * 10.0 + 0.5) - 0.5), 0.012);
+  float tk = step(abs(fract(uv.x * 10.0 + 0.5) - 0.5), 0.05);
   float big = step(abs(uv.x - 0.5), 0.004);
   col = mix(vec3(0.12), vec3(1.0, 0.45, 0.45), max(tk, big));
 }`;
@@ -137,7 +137,7 @@ col = pow(lit, vec3(1.0 / 2.2));</pre>
           id: 'gamma-calc', title: 'Encode / decode', engine: 'numeric', rounds: 5,
           blurb: 'Convert between linear and sRGB (use the γ ≈ 2 shortcut).',
           gen: (rng, level) => {
-            const pairs = [[0.25, 0.5], [0.04, 0.2], [0.09, 0.3], [0.16, 0.4], [0.36, 0.6], [0.49, 0.7], [0.64, 0.8], [0.81, 0.9], [1, 1], [0, 0]];
+            const pairs = [[0.25, 0.5], [0.04, 0.2], [0.09, 0.3], [0.16, 0.4], [0.36, 0.6], [0.49, 0.7], [0.64, 0.8], [0.81, 0.9]];
             if (level === 1) {
               const [lin, s] = rng.pick(pairs);
               if (rng.chance(0.5)) {
@@ -337,7 +337,7 @@ col = pow(lit, vec3(1.0 / 2.2));</pre>
                 explain: `<p>sqrt(${n(lin)}) = <b>${n(s)}</b>.</p>`,
               };
             }
-            const [a, b, ans] = rng.pick([[0.1, 0.7, 0.5], [0.7, 0.1, 0.5], [0.6, 0.8, 0.707], [0.8, 0.6, 0.707], [0, 1, 0.707], [0.2, 0.4, 0.316]]);
+            const [a, b, ans] = rng.pick([[0.1, 0.7, 0.5], [0.7, 0.1, 0.5], [0.6, 0.8, 0.707], [0.8, 0.6, 0.707], [0, 1, 0.707]]);
             return {
               prompt: `Average sRGB <b>${n(a)}</b> and <b>${n(b)}</b> in linear space. sRGB result?`,
               sub: 'Square both, average, square-root.',
@@ -542,7 +542,7 @@ col = pow(lit, vec3(1.0 / 2.2));</pre>
           gen: (rng, level) => {
             const bases = level === 1 ? [[1, 0.5, 0.25], [0.25, 0.5, 1], [0.5, 1, 0.25], [1, 0.25, 0.5]] : [[1, 0.5, 0.25], [0.25, 0.5, 1], [0.5, 1, 0.25], [1, 0.25, 0.5], [0.8, 0.4, 0.1], [0.2, 0.6, 0.8], [0.6, 0.3, 0.9]];
             const c = rng.pick(bases);
-            const k = rng.pick(level === 1 ? [2, 4] : [1.5, 2, 3, 4, 5]);
+            const k = rng.pick(level === 1 ? [2] : level === 2 ? [1.5, 2, 3] : [1.5, 2, 2.5, 3, 4]);
             const hdr = G.mul(c, k).map(r3);
             const res = G.min(hdr, 1).map(r3);
             const key = (x) => x.map((y) => Math.round(y * 10)).join();
