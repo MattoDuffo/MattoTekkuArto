@@ -15,9 +15,14 @@ export function playView(root, cid, gid, query) {
     plan: Array.from({ length: n }, () => ({ concept: c, game: g })),
     onExit: () => { location.hash = '/concept/' + cid; },
     onAgain: () => { root.innerHTML = ''; start(); },
-    onNext: fromPath ? () => { location.hash = cur.continueHref().slice(1); } : null,
-    nextLabel: 'Continue learning path ▶',
+    ...nextAction(),
   });
+  function nextAction() {
+    if (fromPath) return { onNext: () => { location.hash = cur.continueHref().slice(1); }, nextLabel: 'Continue learning path ▶' };
+    const others = c.games.filter((x) => x.id !== gid && store.gameRecord(cid, x.id).plays === 0);
+    if (others.length) return { onNext: () => { location.hash = `/play/${cid}/${others[0].id}`; }, nextLabel: `Next game: ${others[0].title} ▶` };
+    return {};
+  }
   // Intro card first (shows what the game is about)
   const gr = store.gameRecord(cid, gid);
   root.append(topbar(g.title, '#/concept/' + cid));
