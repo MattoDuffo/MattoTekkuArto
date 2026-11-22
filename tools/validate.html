@@ -1,0 +1,176 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="../css/app.css"></head>
+<body><div id="sandbox" style="position:absolute;left:-9999px;top:0;width:375px"></div>
+<script type="module">
+import { loadCurriculum, topics, loadErrors } from '../js/core/curriculum.js';
+import { renderer } from '../js/core/renderer.js';
+import { makeRng } from '../js/core/rng.js';
+import { makeItem } from '../js/core/runner.js';
+import { ENGINES } from '../js/engines/index.js';
+
+const params = new URLSearchParams(location.search);
+const only = params.get('topic');
+const N = +(params.get('n') || 6);
+const problems = [];
+const stats = { topics: 0, concepts: 0, games: 0, slides: 0, items: 0, shaders: 0 };
+const seen = new Set();
+
+function compile(spec, where) {
+  if (!spec || typeof spec !== 'object') { problems.push({ where, msg: 'spec is not an object: ' + spec }); return; }
+  const key = JSON.stringify([spec.frag, spec.vert, spec.defs, spec.vdefs, spec.mesh, Object.keys(spec.uniforms || {}), Object.keys(spec.textures || {})]);
+  if (seen.has(key)) return;
+  seen.add(key);
+  stats.shaders++;
+  const r = renderer().compile(spec);
+  if (r.error) problems.push({ where, msg: r.error, frag: spec.frag });
+  else {
+    const rr = renderer().render(spec, 32, 32, 0.5);
+    if (rr.error) problems.push({ where, msg: 'render: ' + rr.error });
+  }
+}
+
+function checkItem(item, game, where) {
+  stats.items++;
+  const e = game.engine;
+  const P = (msg) => problems.push({ where, msg });
+  if (!item || typeof item !== 'object') return P('item is not an object');
+  if (item.shader) compile(item.shader, where + ' shader');
+  (item.shaders || []).forEach((s, i) => compile(s.spec || s, where + ' shaders[' + i + ']'));
+  if (e === 'mcq') {
+    if (!Array.isArray(item.options) || item.options.length < 2) P('mcq needs >=2 options');
+    else {
+      const a = item.answer ?? 0;
+      if (a < 0 || a >= item.options.length) P('answer index out of range');
+      const keyOf = (o) => {
+        if (o && o.shader) return JSON.stringify([o.shader.frag, o.shader.vert, o.shader.uniforms, o.shader.textures, o.shader.mesh, o.shader.blend]);
+        if (o && o.graph) return 'g:' + o.graph.fns.map((fn) => [0, 0.13, 0.37, 0.5, 0.71, 0.93].map((x) => (+fn.f(x)).toFixed(3)).join()).join('|');
+        return JSON.stringify(o);
+      };
+      const keys = item.options.map(keyOf);
+      if (new Set(keys).size !== keys.length) P('duplicate options');
+      item.options.forEach((o, i) => o && o.shader && compile(o.shader, where + ' option ' + i));
+    }
+    if (!item.prompt) P('missing prompt');
+  } else if (e === 'slider') {
+    if (typeof item.build !== 'function') return P('slider needs build()');
+    const t = {}, lo = {}, hi = {};
+    for (const p of item.params) {
+      if (!(p.target >= p.min && p.target <= p.max)) P(`param ${p.name} target ${p.target} outside [${p.min},${p.max}]`);
+      t[p.name] = p.target; lo[p.name] = p.min; hi[p.name] = p.max;
+    }
+    compile(item.build(t), where + ' build(target)');
+    compile(item.build(lo), where + ' build(min)');
+    compile(item.build(hi), where + ' build(max)');
+    if (item.code) item.code(t);
+  } else if (e === 'numeric') {
+    const a = Array.isArray(item.answer) ? item.answer : [item.answer];
+    if (a.some((x) => typeof x !== 'number' || !isFinite(x))) P('numeric answer not finite: ' + JSON.stringify(item.answer));
+  } else if (e === 'order') {
+    if (!Array.isArray(item.items) || item.items.length < 2) P('order needs >=2 items');
+  } else if (e === 'paint') {
+    const W = item.w || 6, H = item.h || 6;
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      const k = item.solve((x + 0.5) / W, (y + 0.5) / H, x, y);
+      if (!(k >= 0 && k < item.palette.length) || Math.floor(k) !== k) { P('paint solve returned invalid index ' + k); y = H; break; }
+    }
+  } else if (e === 'tap') {
+    if (!item.shader && !item.draw) P('tap needs shader or draw');
+    const ts = item.targets || (item.target ? [item.target] : []);
+    if (!item.score && !ts.length) P('tap needs target(s) or score()');
+    ts.forEach((t) => { if (!(t[0] >= 0 && t[0] <= 1 && t[1] >= 0 && t[1] <= 1)) P('tap target outside 0..1: ' + t); });
+    if (item.score) { const s = item.score(0.5, 0.5); if (!(s >= 0 && s <= 1)) P('tap score() out of range'); }
+  } else if (e === 'codefill') {
+    (item.slots || []).forEach((s, i) => { if (!s.options.includes(s.answer)) P(`slot ${i} answer "${s.answer}" not in options`); });
+    const n = (item.template.match(/\[\[\d+\]\]/g) || []).length;
+    if (n !== item.slots.length) P(`template has ${n} blanks but ${item.slots.length} slots`);
+    if (item.build) compile(item.build(item.slots.map((s) => s.answer)), where + ' build(answers)');
+    if (item.target) compile(item.target, where + ' target');
+  } else if (e === 'buckets') {
+    if (!item.buckets || item.buckets.length < 2) P('buckets needs >=2 buckets');
+    (item.items || []).forEach((it, i) => { if (!(it.bucket >= 0 && it.bucket < item.buckets.length)) P('item ' + i + ' bad bucket'); if (it.shader) compile(it.shader, where + ' bucket item ' + i); });
+  } else if (e === 'vector') {
+    if (!item.drag || !item.drag.length) P('vector needs drag[]');
+    else { const s = item.check(item.drag.map((d) => d.v.slice())); if (!(s >= 0 && s <= 1)) P('vector check() returned ' + s); }
+    if (item.readout) item.readout(item.drag.map((d) => d.v.slice()));
+    if (item.derived) item.derived(item.drag.map((d) => d.v.slice()));
+  } else if (e === 'custom') {
+    if (!item.play && !game.play) P('custom needs play()');
+  }
+}
+
+function mount(item, game, concept, level, where) {
+  const eng = ENGINES[game.engine];
+  const el = document.getElementById('sandbox');
+  el.innerHTML = '';
+  try {
+    const p = eng.round({ el, item, game, concept, level, rng: makeRng(7), roundIndex: 0, totalRounds: 1 });
+    if (p && p.catch) p.catch((err) => problems.push({ where: where + ' (async mount)', msg: String(err && err.stack || err) }));
+  } catch (err) { problems.push({ where: where + ' (mount)', msg: String(err && err.stack || err) }); }
+}
+
+function checkSlides(concept) {
+  (concept.lesson || []).forEach((s, i) => {
+    stats.slides++;
+    const where = `${concept.id} lesson[${i}]`;
+    const sets = [{}];
+    const def = {}, lo = {}, hi = {};
+    for (const c of s.controls || []) { def[c.name] = c.value; lo[c.name] = c.min; hi[c.name] = c.max; if (!(c.value >= c.min && c.value <= c.max)) problems.push({ where, msg: 'control value outside range: ' + c.name }); }
+    for (const vals of [def, lo, hi]) {
+      try {
+        if (s.shader) compile(typeof s.shader === 'function' ? s.shader(vals) : s.shader, where + ' shader');
+        (s.shaders || []).forEach((sh, k) => compile(typeof sh.spec === 'function' ? sh.spec(vals) : sh.spec, where + ' shaders[' + k + ']'));
+        if (typeof s.code === 'function') s.code(vals);
+        if (s.graph && typeof s.graph.fns === 'function') s.graph.fns(vals);
+        if (s.visual) { const d = document.createElement('div'); document.getElementById('sandbox').append(d); s.visual(d, vals); }
+      } catch (err) { problems.push({ where, msg: String(err && err.stack || err) }); }
+    }
+    if (s.quiz && !(s.quiz.answer >= 0 && s.quiz.answer < s.quiz.options.length)) problems.push({ where, msg: 'quiz answer out of range' });
+    if (!s.title) problems.push({ where, msg: 'slide missing title' });
+  });
+}
+
+async function run() {
+  await loadCurriculum();
+  for (const le of loadErrors) if (!only || le.file === only) problems.push({ where: 'load ' + le.file, msg: String(le.error && le.error.stack || le.error) });
+  const ids = new Set();
+  for (const t of topics) {
+    if (only && t.id !== only) continue;
+    stats.topics++;
+    for (const c of t.concepts) {
+      stats.concepts++;
+      if (ids.has(c.id)) problems.push({ where: c.id, msg: 'duplicate concept id' });
+      ids.add(c.id);
+      if (!c.id.includes('.')) problems.push({ where: c.id, msg: 'concept id should be "topic.name"' });
+      if (!c.lesson.length) problems.push({ where: c.id, msg: 'concept has no lesson slides' });
+      if (c.games.length < 2) problems.push({ where: c.id, msg: 'concept has fewer than 2 games' });
+      checkSlides(c);
+      const gids = new Set();
+      for (const g of c.games) {
+        stats.games++;
+        if (gids.has(g.id)) problems.push({ where: c.id + '/' + g.id, msg: 'duplicate game id in concept' });
+        gids.add(g.id);
+        if (!ENGINES[g.engine]) { problems.push({ where: c.id + '/' + g.id, msg: 'unknown engine ' + g.engine }); continue; }
+        for (let level = 1; level <= 3; level++) {
+          const used = new Set();
+          const reps = g.questions ? Math.min(g.questions.length + 2, 40) : N;
+          for (let k = 0; k < reps; k++) {
+            const where = `${c.id}/${g.id} L${level} #${k}`;
+            let item;
+            try { item = makeItem(g, makeRng(1000 * level + k + 1), level, used); }
+            catch (err) { problems.push({ where, msg: 'gen threw: ' + (err && err.stack || err) }); continue; }
+            try { checkItem(item, g, where); } catch (err) { problems.push({ where, msg: 'check threw: ' + (err && err.stack || err) }); }
+            if (k === 0) mount(item, g, c, level, where);
+          }
+        }
+      }
+    }
+  }
+  // let async mounts settle
+  await new Promise((r) => setTimeout(r, 300));
+  window.__RESULT = { stats, problems };
+  document.title = 'done';
+}
+window.addEventListener('error', (e) => problems.push({ where: 'window', msg: e.message + ' ' + (e.error && e.error.stack) }));
+window.addEventListener('unhandledrejection', (e) => problems.push({ where: 'promise', msg: String(e.reason && e.reason.stack || e.reason) }));
+run().catch((e) => { window.__RESULT = { stats, problems: [...problems, { where: 'run', msg: String(e.stack || e) }] }; document.title = 'done'; });
+</script></body></html>
