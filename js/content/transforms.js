@@ -637,7 +637,7 @@ col = texture2D(uTex, p).rgb;</pre>
             { spec: (v) => fSpec('vec2 p = uv - 0.5;\np = rot(uA) * p;\np *= vec2(2.0, 1.0);\np += 0.5;\ncol = drawF(p);', { uA: v.a * DEG }), label: 'rotate, then scale' },
           ],
           code: (v) => `// left                       // right\np *= vec2(2.0, 1.0);          p = rot(radians(${f(v.a)})) * p;\np = rot(radians(${f(v.a)})) * p;  p *= vec2(2.0, 1.0);`,
-          after: '<p><b>Right:</b> a thin F, neatly tilted. <b>Left:</b> a tilted F that got squashed along the <i>screen\'s</i> x axis, so it looks skewed. Same ingredients, different result. (Why it\'s this way round comes in two slides.)</p>',
+          after: '<p><b>Right:</b> a thin F, neatly tilted. <b>Left:</b> a tilted F that got squashed along the <i>screen\'s</i> x axis, so it looks skewed. Same ingredients, different result. (Why it\'s this way round is explained a few slides later.)</p>',
         },
         {
           title: 'When order does NOT matter',
