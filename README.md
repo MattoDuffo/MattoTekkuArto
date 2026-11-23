@@ -8,7 +8,7 @@ Graphics polish is not a goal here. Every lesson and game is meant to make one c
 * **Topics → Concepts → (Lesson + Mini-games).** 21 topics, from "what is a shader?" through
   UVs, colour, shaping functions, SDFs, patterns, transforms, vectors, lighting, noise, textures,
   the pipeline, vertex shaders, blending, colour spaces, post-processing and performance, ending
-  with tech-art effect recipes (dissolve, hologram, water, fire …).
+  with tech-art effect recipes (dissolve, hologram, water, fire, bottled liquids …).
 * **Lessons** are short slides with *live shaders, sliders and code that updates as you drag*.
 * **Mini-games** (2–5 min sessions) come in many types: quiz, *Be the GPU* (paint pixels by running
   the shader in your head), *Tune it* (match a target with sliders), *Calculate* (keypad),

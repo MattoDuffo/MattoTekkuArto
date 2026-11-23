@@ -21,6 +21,11 @@
 //   blend: 'alpha' | 'add' | 'multiply' | 'premult'  (draws over a checker background)
 //   bg: [r,g,b]  background colour for 3D meshes / blending
 //   wire: true   // draw mesh as wireframe lines
+//   cull: true | 'back' | 'front'   // skip back faces (true/'back') or front faces
+//   model: [16 numbers]  // optional model matrix (column-major), default identity
+//   passes: [spec, ...]  // extra draws on top (same canvas/depth buffer). Each pass
+//                        // inherits mesh/camera/model and may set its own blend/cull;
+//                        // blended passes don't write depth (like transparent materials).
 // }
 // Always available uniforms: uTime (seconds), uRes (pixels), uMouse (0..1)
 // Prelude helpers: PI, TAU, hash(vec2), hash2(vec2), vnoise(vec2), gnoise(vec2),
@@ -381,20 +386,43 @@ void main(){
     gl.disable(gl.BLEND);
     gl.disable(gl.DEPTH_TEST);
     gl.disable(gl.CULL_FACE);
+    gl.depthMask(true);
     const bg = spec.bg || [0.08, 0.085, 0.11];
     gl.clearColor(bg[0], bg[1], bg[2], 1);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     if (spec.blend) {
       this._drawBg(w, h, spec);
       gl.enable(gl.BLEND);
-      if (spec.blend === 'add') gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
-      else if (spec.blend === 'multiply') gl.blendFunc(gl.DST_COLOR, gl.ZERO);
-      else if (spec.blend === 'premult') gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
-      else gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+      this._blendFunc(spec.blend);
     }
-    if (mesh.is3D) { gl.enable(gl.DEPTH_TEST); if (spec.cull) gl.enable(gl.CULL_FACE); }
+    this._state(spec, mesh);
     this._drawWith(c, mesh, spec, w, h, t);
+    for (const p of spec.passes || []) {
+      const ps = { mesh: spec.mesh, camera: spec.camera, model: spec.model, ...p };
+      const pc = this.compile(ps);
+      if (pc.error) { gl.depthMask(true); return pc; }
+      const pm = this._mesh(ps.mesh || 'quad');
+      if (ps.blend) { gl.enable(gl.BLEND); this._blendFunc(ps.blend); gl.depthMask(false); } else { gl.disable(gl.BLEND); gl.depthMask(true); }
+      this._state(ps, pm);
+      this._drawWith(pc, pm, ps, w, h, t);
+    }
+    gl.depthMask(true);
     return { ok: true };
+  }
+
+  _blendFunc(b) {
+    const gl = this.gl;
+    if (b === 'add') gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
+    else if (b === 'multiply') gl.blendFunc(gl.DST_COLOR, gl.ZERO);
+    else if (b === 'premult') gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+    else gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+  }
+
+  /** Depth test + face culling for one draw */
+  _state(spec, mesh) {
+    const gl = this.gl;
+    if (mesh.is3D) gl.enable(gl.DEPTH_TEST); else gl.disable(gl.DEPTH_TEST);
+    if (mesh.is3D && spec.cull) { gl.enable(gl.CULL_FACE); gl.cullFace(spec.cull === 'front' ? gl.FRONT : gl.BACK); } else gl.disable(gl.CULL_FACE);
   }
 
   /** Render and copy into a 2D canvas context (fills whole target canvas). */
