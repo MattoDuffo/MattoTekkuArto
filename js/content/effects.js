@@ -4,6 +4,7 @@
 // effects you actually ship. Each concept = one recipe, built up one ingredient
 // per slide, then games that test the ingredients and the assembly.
 import { tf, q, distinct, f, n, G } from './_kit.js';
+import { LIQUID_CONCEPTS } from './liquid.js';
 
 // ---------------------------------------------------------------- shared bits
 const CAM = { yaw: 0.5, pitch: 0.3, dist: 3.0 };
@@ -1819,7 +1820,7 @@ export default {
   id: 'effects',
   title: 'Tech-art effect recipes',
   icon: '🧪',
-  blurb: 'Everything combined: dissolve, hologram, lava, fire, shields, toon, water, flowmaps, wind, triplanar.',
+  blurb: 'Everything combined: dissolve, hologram, lava, fire, shields, toon, water, flowmaps, wind, triplanar, bottled liquids.',
   cheatsheet: `
 <p>Read any effect as <b>Mask</b> (where?) → <b>Motion</b> (how does it move?) → <b>Colour</b> (what colour?) → <b>Output</b> (opaque / alpha / additive?).</p>
 <ul>
@@ -1832,9 +1833,10 @@ export default {
 <li><b>Water</b>: depth → mix(shallow, deep); uv + centred noise offset; two scrolling normal layers; foam = <code>step(noise, 1 − depth / width)</code>.</li>
 <li><b>Flowmap</b>: <code>flow = tex.rg·2 − 1</code>; two phases <code>fract(t)</code>, <code>fract(t + 0.5)</code>; weight <code>|1 − 2·ph0|</code>.</li>
 <li><b>Wind</b> (vertex): <code>pos.x += sin(t·speed + phase) · amp · pow(h, e)</code>, phase = hash(object id) · TAU.</li>
+<li><b>Bottled liquid</b> (fake, no sim): vertex <code>vRel = worldPos − pivot</code>, <code>vAbove = vRel.y − (fill + wob.x·x + wob.y·z)</code>; fragment <code>if (vAbove &gt; 0) discard</code>; back faces (<code>!gl_FrontFacing</code>, culling off) = flat surface colour with normal <code>(−wob.x, 1, −wob.y)</code>. Script: spring <code>force = −k·tilt − c·tiltVel − kick·acc</code> → WobbleX/Z. Glass = 2nd additive pass, liquid pushed in along normals.</li>
 <li><b>Triplanar</b>: <code>w = pow(abs(N), k); w /= sum</code>; samples at <code>P.zy, P.xz, P.xy</code>.</li>
 </ul>
 <pre class="code">// moving a pattern: uv + offset moves it the OPPOSITE way
 fbm(uv + vec2(0.0, -uTime))   // pattern moves UP</pre>`,
-  concepts: [dissolve, hologram, lava, fire, shield, toon, water, flowmap, wind, triplanar],
+  concepts: [dissolve, hologram, lava, fire, shield, toon, water, flowmap, wind, triplanar, ...LIQUID_CONCEPTS],
 };

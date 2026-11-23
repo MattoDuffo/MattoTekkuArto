@@ -65,7 +65,9 @@ Everything visual is a **spec** object rendered by the shared WebGL1 renderer (G
   textures: { uTex: 'photo' },               // or { uTex: { name:'checker', filter:'nearest'|'linear'|'mipmap', wrap:'repeat'|'clamp'|'mirror' } }
   camera: { yaw: 0.6, pitch: 0.45, dist: 3.2, spin: 0.5 }, // 3D meshes only
   blend: 'alpha' | 'add' | 'multiply' | 'premult',  // draws over a checkerboard so alpha is visible
-  bg: [r, g, b],  wire: true,  cull: true,
+  bg: [r, g, b],  wire: true,  cull: true | 'front',
+  model: [16 numbers],      // optional model matrix (column-major)
+  passes: [spec, ...],      // extra draws on top (inherit mesh/camera/model; blended ones don't write depth)
 }
 ```
 

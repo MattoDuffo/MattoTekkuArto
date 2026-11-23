@@ -17,7 +17,7 @@ const seen = new Set();
 
 function compile(spec, where) {
   if (!spec || typeof spec !== 'object') { problems.push({ where, msg: 'spec is not an object: ' + spec }); return; }
-  const key = JSON.stringify([spec.frag, spec.vert, spec.defs, spec.vdefs, spec.mesh, Object.keys(spec.uniforms || {}), Object.keys(spec.textures || {})]);
+  const key = JSON.stringify([spec.frag, spec.vert, spec.defs, spec.vdefs, spec.mesh, Object.keys(spec.uniforms || {}), Object.keys(spec.textures || {}), (spec.passes || []).map((p) => [p.frag, p.vert, p.defs, p.vdefs, p.mesh])]);
   if (seen.has(key)) return;
   seen.add(key);
   stats.shaders++;
@@ -42,7 +42,7 @@ function checkItem(item, game, where) {
       const a = item.answer ?? 0;
       if (a < 0 || a >= item.options.length) P('answer index out of range');
       const keyOf = (o) => {
-        if (o && o.shader) return JSON.stringify([o.shader.frag, o.shader.vert, o.shader.uniforms, o.shader.textures, o.shader.mesh, o.shader.blend]);
+        if (o && o.shader) return JSON.stringify([o.shader.frag, o.shader.vert, o.shader.uniforms, o.shader.textures, o.shader.mesh, o.shader.blend, o.shader.model, o.shader.vdefs, o.shader.passes, o.shader.cull]);
         if (o && o.graph) return 'g:' + o.graph.fns.map((fn) => [0, 0.13, 0.37, 0.5, 0.71, 0.93].map((x) => (+fn.f(x)).toFixed(3)).join()).join('|');
         return JSON.stringify(o);
       };

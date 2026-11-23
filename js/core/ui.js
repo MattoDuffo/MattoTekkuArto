@@ -84,7 +84,7 @@ function loop() {
 function startLoop() { if (!loopOn) { loopOn = true; requestAnimationFrame(loop); } }
 
 export function usesTime(spec) {
-  return !!(spec && (spec.animate || (spec.camera && spec.camera.spin) || /uTime/.test((spec.frag || '') + (spec.vert || '') + (spec.defs || '') + (spec.vdefs || ''))));
+  return !!(spec && (spec.animate || (spec.camera && spec.camera.spin) || /uTime/.test((spec.frag || '') + (spec.vert || '') + (spec.defs || '') + (spec.vdefs || '')) || (spec.passes || []).some(usesTime)));
 }
 
 /**
